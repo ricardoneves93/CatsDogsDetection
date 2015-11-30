@@ -3,6 +3,8 @@ CatsDogsDetection/x64
 CatsDogsDetection/Debug
 CatsDogsDetection/*.vcxproj
 CatsDogsDetection/*.filters
+Debug/
+Release/
 x64/
 *.opensdf
 *.sdf
