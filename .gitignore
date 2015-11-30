@@ -1,5 +1,6 @@
-../.git/
+.git/
 CatsDogsDetection/x64
+CatsDogsDetection/Debug
 CatsDogsDetection/*.vcxproj
 CatsDogsDetection/*.filters
 x64/
