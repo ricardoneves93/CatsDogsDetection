@@ -1,0 +1,9 @@
+../.git/
+CatsDogsDetection/x64
+CatsDogsDetection/*.vcxproj
+CatsDogsDetection/*.filters
+x64/
+*.opensdf
+*.sdf
+*.sln
+*.suo
