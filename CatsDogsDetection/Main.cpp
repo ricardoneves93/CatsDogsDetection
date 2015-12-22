@@ -12,17 +12,37 @@ const int DOGS_CLASS = 1;
 const int minHessian = 400;
 const int numClusters = 600;
 const int numTrainImages = 20; //12499
-const int numTestImages = 10; //12500
+const int numTestImages = 500; //12500
 
 const string test_dir = "test\\";
 const string dataset_dir = "train\\";
 const string vocabulary_path = "vocabulary.yml";
 
-const string matcher_type = "BruteForce";
+/* BruteForce */
+/* FlannBased */
+const string matcher_type = "FlannBased";
+/* SIFT */
+/* SURF */
 const string extractor_type = "SURF";
+/* SIFT */
+/* SURF */
 const string detector_type = "SURF";
 
 Mat vocabulary;
+
+// Output data structure
+struct excelData {
+	int id;
+	int label;
+};
+
+// comparison class
+struct classcomp {
+	bool operator() (const excelData& first, const excelData& second) const
+	{
+		return first.id < second.id;
+	}
+};
 
 string toLowerString(string str) {
 	for (int i = 0; i < str.size(); i++) {
@@ -80,9 +100,13 @@ void createTrainingDescriptors(vector<string> trainImages) {
 
 	//Mat img;
 	//string filepath;
-	SurfFeatureDetector detector(minHessian);
-
-	SurfDescriptorExtractor extractor;
+	cout << "create training descriptors" << endl;
+	Ptr<FeatureDetector> detector = FeatureDetector::create(detector_type);
+	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(extractor_type);
+	if (detector_type == "SURF") {
+		detector->set("hessianThreshold", minHessian);
+		extractor->set("hessianThreshold", minHessian);
+	}
 	//Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(extractor_type);
 	
 	
@@ -98,10 +122,10 @@ void createTrainingDescriptors(vector<string> trainImages) {
 
 		vector<KeyPoint> keypoints;
 		Mat img = imread(filepath, CV_LOAD_IMAGE_COLOR);
-		detector.detect(img, keypoints);
+		detector->detect(img, keypoints);
 
 		Mat descriptors;
-		extractor.compute(img, keypoints, descriptors);
+		extractor->compute(img, keypoints, descriptors);
 		training_descriptors->push_back(descriptors);
 
 		if (i % 500 == 0)
@@ -119,8 +143,6 @@ void createTrainingDescriptors(vector<string> trainImages) {
 	bowtrainer->add(*training_descriptors);
 
 	delete training_descriptors;
-
-	//cout << "Deleted" << endl;
 	
 	vocabulary = bowtrainer->cluster();
 
@@ -213,13 +235,16 @@ void getTestImgs(vector <string>* testImagesPath) {
 	}
 }
 
-/* Processe test images */
+/* Processes test images */
 void testImages(vector <string>* testImagesPath, CvNormalBayesClassifier* bayes) {
 
-
-	SurfFeatureDetector detector(minHessian);
+	Ptr<FeatureDetector> detector = FeatureDetector::create(detector_type);
 	Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(matcher_type);
 	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(extractor_type);
+	if (detector_type == "SURF") {
+		detector->set("hessianThreshold", minHessian);
+		extractor->set("hessianThreshold", minHessian);
+	}
 
 	BOWImgDescriptorExtractor bowide(extractor, matcher);
 	bowide.setVocabulary(vocabulary);
@@ -230,12 +255,16 @@ void testImages(vector <string>* testImagesPath, CvNormalBayesClassifier* bayes)
 	int classID = -1;
 	vector<KeyPoint> keypoints;
 
+
+	// Set that will hold ordered data
+	set<excelData, classcomp> dataSet;
+#pragma omp parallel for num_threads(omp_get_max_threads())
 	for (int i = 0; i < testImagesPath->size(); i++) {
 		classID = -1;
 		Mat hist;
 		keypoints.clear();
 		Mat image = imread(testImagesPath->at(i), IMREAD_COLOR);
-		detector.detect(image, keypoints);
+		detector->detect(image, keypoints);
 		bowide.compute(image, keypoints, hist);
 
 		if (hist.rows == 0) { //When detection goes wrong
@@ -246,8 +275,20 @@ void testImages(vector <string>* testImagesPath, CvNormalBayesClassifier* bayes)
 			classID = (int)bayes->predict(hist);
 		}
 
-		output << (i + 1) << "," << classID << "\n";
+		excelData data;
+		data.id = (i + 1);
+		data.label = classID;
+		#pragma omp critical
+		{
+			dataSet.insert(data);
+
+		}
 	}
+
+	for (set<excelData, classcomp>::iterator it = dataSet.begin(); it != dataSet.end(); ++it) {
+		output << it->id << "," << it->label << "\n";
+	}
+
 	cout << output.str();
 	outputFile << output.str();
 	outputFile.close();
@@ -260,6 +301,8 @@ void loadVocabulary() {
 }
 
 int main( int argc, char** argv ) {
+
+	initModule_nonfree();
 	
 	vector<string> trainImages = getFilesInDir();
 
