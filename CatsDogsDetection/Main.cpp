@@ -11,11 +11,12 @@ const int CATS_CLASS = 0;
 const int DOGS_CLASS = 1;
 const int minHessian = 400;
 const int numClusters = 600;
-const int numTrainImages = 12499; //12499
-const int numTestImages = 12500; //12500
+const int numTrainImages = 20; //12499
+const int numTestImages = 10; //12500
 
 const string test_dir = "test\\";
 const string dataset_dir = "train\\";
+const string vocabulary_path = "vocabulary.yml";
 
 const string matcher_type = "BruteForce";
 const string extractor_type = "SURF";
@@ -125,7 +126,7 @@ void createTrainingDescriptors(vector<string> trainImages) {
 
 	delete bowtrainer;
 
-	FileStorage fs("dictionary.yml", FileStorage::WRITE);
+	FileStorage fs("vocabulary.yml", FileStorage::WRITE);
 	fs << "vocabulary" << vocabulary;
 	fs.release();
 	
@@ -252,11 +253,22 @@ void testImages(vector <string>* testImagesPath, CvNormalBayesClassifier* bayes)
 	outputFile.close();
 }
 
+void loadVocabulary() {
+	FileStorage fs(vocabulary_path, FileStorage::READ);
+	fs["vocabulary"] >> vocabulary;
+	fs.release();
+}
+
 int main( int argc, char** argv ) {
 	
 	vector<string> trainImages = getFilesInDir();
 
-	createTrainingDescriptors(trainImages);
+	if (fileExists(vocabulary_path)) {
+		loadVocabulary();
+	}
+	else {
+		createTrainingDescriptors(trainImages);
+	}
 	
 	vector<int> classesNames;
 	map<int, Mat> classes_training_dataset; 
