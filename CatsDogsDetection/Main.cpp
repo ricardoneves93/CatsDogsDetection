@@ -10,9 +10,9 @@ using namespace std;
 const int CATS_CLASS = 0;
 const int DOGS_CLASS = 1;
 const int minHessian = 400;
-const int numClusters = 100;
-const int numTrainImages = 1000; //12499
-const int numTestImages = 20; //12500
+const int numClusters = 600;
+const int numTrainImages = 12499; //12499
+const int numTestImages = 12500; //12500
 
 const string test_dir = "test\\";
 const string dataset_dir = "train\\";
@@ -85,7 +85,7 @@ void createTrainingDescriptors(vector<string> trainImages) {
 	//Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(extractor_type);
 	
 	
-	Mat training_descriptors;
+	Mat *training_descriptors = new Mat();
 	/* Extracting features from training set thar contains all classes */
 	for (int i = 0; i < trainImages.size(); i++) {
 		string filepath = dataset_dir + trainImages[i];
@@ -101,7 +101,7 @@ void createTrainingDescriptors(vector<string> trainImages) {
 
 		Mat descriptors;
 		extractor.compute(img, keypoints, descriptors);
-		training_descriptors.push_back(descriptors);
+		training_descriptors->push_back(descriptors);
 
 		if (i % 500 == 0)
 			cout << "Iteration: " << i << " of " << trainImages.size() << endl;
@@ -112,20 +112,32 @@ void createTrainingDescriptors(vector<string> trainImages) {
 	// Creates vocabulary
 	cout << "Going to do vocabulary" << endl;
 	/* Creating the vocabulary (bag of words) */
-	BOWKMeansTrainer bowtrainer(numClusters);
-	bowtrainer.add(training_descriptors);
-	vocabulary = bowtrainer.cluster();
+	BOWKMeansTrainer *bowtrainer = new BOWKMeansTrainer(numClusters);
+
+	
+	bowtrainer->add(*training_descriptors);
+
+	delete training_descriptors;
+
+	//cout << "Deleted" << endl;
+	
+	vocabulary = bowtrainer->cluster();
+
+	delete bowtrainer;
 
 	FileStorage fs("dictionary.yml", FileStorage::WRITE);
 	fs << "vocabulary" << vocabulary;
 	fs.release();
+	
 
-	cout << "Finished vocabulary creation" << endl;
+	cout << "Finished vocabulary creation (1)" << endl;
 
 }
 
 /* Create histograms for each class (dog and cat) */
 void computeClassesHistograms(vector <string> trainImages, vector<int>* classIdentifiers, map<int, Mat>* classes_training_dataset) {
+
+	cout << "Started computing histograms (2)" << endl;
 
 	Ptr<FeatureDetector> detector = FeatureDetector::create(detector_type);
 	Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(matcher_type);
@@ -169,6 +181,9 @@ void computeClassesHistograms(vector <string> trainImages, vector<int>* classIde
 
 /* Bayes classification */
 void bayesClassifier(vector<int>* classesNames, map<int, Mat>* classes_training_dataset, CvNormalBayesClassifier* bayes) {
+
+	cout << "Bayes classifier (3)" << endl;
+
 	Mat samples;
 	Mat labels;
 	for (int i = 0; i < classesNames->size(); i++) {
