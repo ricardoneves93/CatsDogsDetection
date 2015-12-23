@@ -11,8 +11,8 @@ const int CATS_CLASS = 0;
 const int DOGS_CLASS = 1;
 const int minHessian = 400;
 const int numClusters = 600;
-const int numTrainImages = 20; //12499
-const int numTestImages = 500; //12500
+const int numTrainImages = 1000; //12499
+const int numTestImages = 12500; //12500
 
 const string test_dir = "test\\";
 const string dataset_dir = "train\\";
@@ -20,7 +20,7 @@ const string vocabulary_path = "vocabulary.yml";
 
 /* BruteForce */
 /* FlannBased */
-const string matcher_type = "FlannBased";
+const string matcher_type = "BruteForce";
 /* SIFT */
 /* SURF */
 const string extractor_type = "SURF";
@@ -268,7 +268,6 @@ void testImages(vector <string>* testImagesPath, CvNormalBayesClassifier* bayes)
 		bowide.compute(image, keypoints, hist);
 
 		if (hist.rows == 0) { //When detection goes wrong
-			cout << "Merda" << endl;
 			classID = 0;
 		}
 		else {
